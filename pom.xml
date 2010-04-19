@@ -270,11 +270,11 @@
       </plugin>
     </plugins>
   </reporting>
-  <distributionManagement>
+  <!--distributionManagement>
     <repository>
       <id>nexus</id>
       <name>nexus</name>
       <url>http://obweb.il.outbrain.com:8081/nexus/content/repositories/releases/</url>
     </repository>
-  </distributionManagement>
+  </distributionManagement-->
 </project>
