@@ -96,6 +96,7 @@ public interface Keyspace {
    * and superColumn references of the ColumnOrSuperColumn object it maps to
    * will be null.
    */
+  @Deprecated
   Map<String, Column> multigetColumn(List<String> keys, ColumnPath columnPath)
       throws InvalidRequestException, UnavailableException, TException, TimedOutException;
 
@@ -107,6 +108,7 @@ public interface Keyspace {
    * both the column and superColumn references of the ColumnOrSuperColumn
    * object it maps to will be null.
    */
+  @Deprecated
   Map<String, SuperColumn> multigetSuperColumn(List<String> keys, ColumnPath columnPath)
       throws InvalidRequestException, UnavailableException, TException, TimedOutException;
 
@@ -118,6 +120,7 @@ public interface Keyspace {
    * both the column and superColumn references of the ColumnOrSuperColumn
    * object it maps to will be null.
    */
+  @Deprecated
   Map<String, SuperColumn> multigetSuperColumn(List<String> keys, ColumnPath columnPath,
       boolean reversed, int size) throws InvalidRequestException, UnavailableException, TException,
       TimedOutException;
@@ -147,8 +150,12 @@ public interface Keyspace {
   /**
    * Insert Columns or SuperColumns across different Column Families for the same row key.
    */
+  @Deprecated
   void batchInsert(String key, Map<String, List<Column>> cfmap,
       Map<String, List<SuperColumn>> superColumnMap) throws InvalidRequestException,
+      UnavailableException, TException, TimedOutException;
+  
+  void batchMutate(Map<String, Map<String, List<Mutation>>> mmap) throws InvalidRequestException, 
       UnavailableException, TException, TimedOutException;
 
   /**
@@ -175,6 +182,7 @@ public interface Keyspace {
   /**
    * returns a subset of columns for a range of keys.
    */
+  @Deprecated
   Map<String, List<Column>> getRangeSlice(ColumnParent columnParent, SlicePredicate predicate,
       String start, String finish, int count)
       throws InvalidRequestException, UnavailableException, TException, TimedOutException;
@@ -182,8 +190,23 @@ public interface Keyspace {
   /**
    * returns a subset of super columns for a range of keys.
    */
+  @Deprecated
   Map<String, List<SuperColumn>> getSuperRangeSlice(ColumnParent columnParent, SlicePredicate predicate,
       String start, String finish, int count)
+      throws InvalidRequestException, UnavailableException, TException, TimedOutException;
+
+  /**
+   * returns a subset of columns for a range of keys.
+   */
+  Map<String, List<Column>> getRangeSlices(ColumnParent columnParent, SlicePredicate predicate,
+      KeyRange range)
+      throws InvalidRequestException, UnavailableException, TException, TimedOutException;
+
+  /**
+   * returns a subset of super columns for a range of keys.
+   */
+  Map<String, List<SuperColumn>> getSuperRangeSlices(ColumnParent columnParent, SlicePredicate predicate,
+      KeyRange range)
       throws InvalidRequestException, UnavailableException, TException, TimedOutException;
 
   /**

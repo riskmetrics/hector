@@ -182,6 +182,74 @@ public class KeyspaceTest {
       }
     }
   }
+  
+  @Test
+  public void testBatchMutateColumn() throws IllegalArgumentException, NoSuchElementException,
+      IllegalStateException, NotFoundException, TException, Exception {
+	Map<String, Map<String, List<Mutation>>> mmap = new HashMap<String, Map<String, List<Mutation>>>(10);
+    for (int i = 0; i < 10; i++) {
+      Map<String, List<Mutation>> innerMap = new HashMap<String, List<Mutation>>();
+      List<Mutation> list = new ArrayList<Mutation>(10);
+      for (int j = 0; j < 10; j++) {
+    	Mutation mut = new Mutation();
+        Column col = new Column(bytes("testBatchMutateColumn_" + j),
+            bytes("testBatchMutateColumn_value_" + j), 1L);
+        mut.setColumn_or_supercolumn(new ColumnOrSuperColumn().setColumn(col));
+        list.add(mut);
+      }
+      innerMap.put("Standard1", list);
+      mmap.put("testBatchMutateColumn_Row" + i, innerMap);
+    }
+    keyspace.batchMutate(mmap);
+
+    // get value
+    for (int i = 0; i < 10; i++) {
+      for (int j = 0; j < 10; j++) {
+        ColumnPath cp = new ColumnPath("Standard1");
+        cp.setColumn(bytes("testBatchMutateColumn_" + j));
+
+        Column col = keyspace.getColumn("testBatchMutateColumn_Row" + i, cp);
+        assertNotNull(col);
+        String value = string(col.getValue());
+        assertEquals("testBatchMutateColumn_value_" + j, value);
+
+      }
+    }
+
+    // remove value
+    mmap.clear();
+    for (int i = 0; i < 10; i++) {
+      Map<String, List<Mutation>> innerMap = new HashMap<String, List<Mutation>>();
+      SlicePredicate sp = new SlicePredicate();
+      for (int j = 0; j < 10; j++) {
+          sp.addToColumn_names(bytes("testBatchMutateColumn_" + j));
+      }
+      List<Mutation> list = new ArrayList<Mutation>(1);
+      Mutation mut = new Mutation();
+      mut.setDeletion(new Deletion().setPredicate(sp).setTimestamp(1L));
+      list.add(mut);
+      innerMap.put("Standard1", list);
+      mmap.put("testBatchMutateColumn_Row" + i, innerMap);
+    }    
+    keyspace.batchMutate(mmap);
+    
+    
+    // ensure removed
+    for (int i = 0; i < 10; i++) {
+      for (int j = 0; j < 10; j++) {
+        ColumnPath cp = new ColumnPath("Standard1");
+        cp.setColumn(bytes("testBatchMutateColumn_" + j));
+        try {
+        	Column col = keyspace.getColumn("testBatchMutateColumn_Row" + i, cp);
+        	if(col != null) {
+        		fail(String.format("testBatchMutateColumn_Row%s/testBatchMutateColumn_%s should have been deleted", i, j));
+        	}
+        } catch(NotFoundException nfe) {
+        	continue;
+        }
+      }
+    }
+  }  
 
   @Test
   public void testGetClient() {

@@ -20,7 +20,9 @@ import org.apache.cassandra.thrift.ColumnParent;
 import org.apache.cassandra.thrift.ColumnPath;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.InvalidRequestException;
+import org.apache.cassandra.thrift.KeyRange;
 import org.apache.cassandra.thrift.KeySlice;
+import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.thrift.NotFoundException;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
@@ -124,6 +126,20 @@ import org.slf4j.LoggerFactory;
     };
     operateWithFailover(op);
   }
+  
+  @Override
+  public void batchMutate(final Map<String, Map<String, List<Mutation>>> mmap) 
+      throws InvalidRequestException, UnavailableException, TException, TimedOutException {
+    Operation<Void> op = new Operation<Void>(OperationType.WRITE) {
+      @Override
+      public Void execute(Cassandra.Client cassandra) throws InvalidRequestException, UnavailableException,
+          TException, TimedOutException {
+        cassandra.batch_mutate(keyspaceName, mmap, consistency);
+        return null;
+      }
+    };
+    operateWithFailover(op);
+  }
 
   @Override
   public int getCount(final String key, final ColumnParent columnParent)
@@ -150,14 +166,7 @@ import org.slf4j.LoggerFactory;
           UnavailableException, TException, TimedOutException {
         List<KeySlice> keySlices = cassandra.get_range_slice(keyspaceName, columnParent, predicate,
             start, finish, count, consistency);
-        if (keySlices == null || keySlices.isEmpty()) {
-          return Collections.emptyMap();
-        }
-        Map<String, List<Column>> ret = new LinkedHashMap<String, List<Column>>(keySlices.size());
-        for (KeySlice keySlice : keySlices) {
-          ret.put(keySlice.getKey(), getColumnList(keySlice.getColumns()));
-        }
-        return ret;
+        return keySlicesColumnTransform(keySlices);
       }
     };
     operateWithFailover(op);
@@ -175,20 +184,73 @@ import org.slf4j.LoggerFactory;
           throws InvalidRequestException, UnavailableException, TException, TimedOutException {
         List<KeySlice> keySlices = cassandra.get_range_slice(keyspaceName, columnParent, predicate,
             start, finish, count, consistency);
-        if (keySlices == null || keySlices.isEmpty()) {
-          return Collections.emptyMap();
-        }
-        Map<String, List<SuperColumn>> ret = new LinkedHashMap<String, List<SuperColumn>>(
-            keySlices.size());
-        for (KeySlice keySlice : keySlices) {
-          ret.put(keySlice.getKey(), getSuperColumnList(keySlice.getColumns()));
-        }
-        return ret;
+        return keySlicesSuperColumnTransform(keySlices);
       }
     };
     operateWithFailover(op);
     return op.getResult();
   }
+  
+  public static Map<String, List<Column>> keySlicesColumnTransform(List<KeySlice> keySlices) {
+    if(keySlices == null || keySlices.isEmpty()) {
+      return Collections.emptyMap();
+	}
+    Map<String, List<Column>> ret = new LinkedHashMap<String, List<Column>>(keySlices.size());
+	for(KeySlice keySlice: keySlices) {
+	  ret.put(keySlice.getKey(), getColumnList(keySlice.getColumns()));
+	}
+	return ret;
+  }
+  
+  public static Map<String, List<SuperColumn>> keySlicesSuperColumnTransform(List<KeySlice> keySlices) {
+	if(keySlices == null || keySlices.isEmpty()) {
+	  return Collections.emptyMap();
+    }
+	Map<String, List<SuperColumn>> ret = new LinkedHashMap<String, List<SuperColumn>>(keySlices.size());
+	for(KeySlice keySlice: keySlices) {
+	  ret.put(keySlice.getKey(), getSuperColumnList(keySlice.getColumns()));
+	}
+	return ret;
+  }
+  
+  /**
+   * returns a subset of columns for a range of keys.
+   */
+  @Override
+  public Map<String, List<Column>> getRangeSlices(final ColumnParent columnParent, final SlicePredicate predicate,
+      final KeyRange range)
+      throws InvalidRequestException, UnavailableException, TException, TimedOutException {
+	Operation<Map<String, List<Column>>> op = new Operation<Map<String, List<Column>>>(OperationType.READ) {
+	  @Override
+	  public Map<String, List<Column>> execute(Cassandra.Client cassandra)
+	      throws InvalidRequestException, UnavailableException, TException, TimedOutException {
+		List<KeySlice> keySlices = cassandra.get_range_slices(keyspaceName, columnParent, predicate, range, consistency);
+		return keySlicesColumnTransform(keySlices);
+	  }
+	};
+	operateWithFailover(op);
+	return op.getResult();
+  }
+
+  /**
+   * returns a subset of super columns for a range of keys.
+   */
+  @Override
+  public Map<String, List<SuperColumn>> getSuperRangeSlices(final ColumnParent columnParent, final SlicePredicate predicate,
+      final KeyRange range)
+      throws InvalidRequestException, UnavailableException, TException, TimedOutException {
+    Operation<Map<String, List<SuperColumn>>> op = new Operation<Map<String, List<SuperColumn>>>(OperationType.READ) {
+    @Override
+    public Map<String, List<SuperColumn>> execute(Cassandra.Client cassandra)
+        throws InvalidRequestException, UnavailableException, TException, TimedOutException {
+      List<KeySlice> keySlices = cassandra.get_range_slices(keyspaceName, columnParent, predicate, range, consistency);
+        return keySlicesSuperColumnTransform(keySlices);
+      }
+	};
+	operateWithFailover(op);
+	return op.getResult();
+  }
+
 
   @Override
   public List<Column> getSlice(final String key, final ColumnParent columnParent,
