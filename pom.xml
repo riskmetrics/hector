@@ -206,24 +206,6 @@
       <version>1.0.0</version>
       <scope>system</scope>
     </dependency>
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-context</artifactId>
-      <version>3.0.0.RELEASE</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-      </exclusions>
-     </dependency>
-     <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-test</artifactId>
-      <version>3.0.0.RELEASE</version>   
-      <scope>test</scope>               
-    </dependency>
   </dependencies>
 
   <reporting>
@@ -270,11 +252,4 @@
       </plugin>
     </plugins>
   </reporting>
-  <!--distributionManagement>
-    <repository>
-      <id>nexus</id>
-      <name>nexus</name>
-      <url>http://obweb.il.outbrain.com:8081/nexus/content/repositories/releases/</url>
-    </repository>
-  </distributionManagement-->
 </project>
